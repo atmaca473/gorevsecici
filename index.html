@@ -238,8 +238,13 @@ onValue(tasksRef, (snapshot) => {
   if (data === null && !remoteInitialized) {
     tasks = DEMO_TASKS;
     saveToFirebase();
-  } else if (Array.isArray(data)) {
-    tasks = data;
+  } else if (data !== null) {
+    // Firebase bazen array yerine object döner (silme sonrası index boşluğu)
+    if (Array.isArray(data)) {
+      tasks = data.filter(Boolean);
+    } else if (typeof data === 'object') {
+      tasks = Object.values(data).filter(Boolean);
+    }
   }
   remoteInitialized = true;
   renderTasks();
@@ -253,7 +258,9 @@ onValue(tasksRef, (snapshot) => {
 function saveToFirebase() {
   dot.className = 'sync-dot syncing';
   lbl.textContent = 'kaydediliyor...';
-  set(tasksRef, tasks).then(() => {
+  // Temiz sıralı array olarak kaydet, Firebase index sorununu önler
+  const cleanTasks = tasks.filter(Boolean).map(t => ({ name: t.name, tags: t.tags || [] }));
+  set(tasksRef, cleanTasks).then(() => {
     dot.className = 'sync-dot online';
     lbl.textContent = 'canlı — tüm cihazlarda senkron';
   });
